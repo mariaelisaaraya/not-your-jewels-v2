@@ -1,27 +1,40 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
+//import Link from "next/link";
 import { motion } from "framer-motion";
 import { Diamond, Facebook, Instagram, Linkedin, Mail, MapPin, Phone, Twitter } from "lucide-react";
-import { hardhat } from "viem/chains";
-import { CurrencyDollarIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
-import { SwitchTheme } from "~~/components/SwitchTheme";
-import { Faucet } from "~~/components/scaffold-eth";
-import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
-import { useGlobalState } from "~~/services/store/store";
+
+//import { hardhat } from "viem/chains";
+//import { CurrencyDollarIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+//import { SwitchTheme } from "~~/components/SwitchTheme";
+//import { Faucet } from "~~/components/scaffold-eth";
+//import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
+//import { useGlobalState } from "~~/services/store/store";
 
 /**
  * Site footer
  */
 export const Footer = () => {
-  const nativeCurrencyPrice = useGlobalState(state => state.nativeCurrency.price);
-  const { targetNetwork } = useTargetNetwork();
-  const isLocalNetwork = targetNetwork.id === hardhat.id;
+  //const nativeCurrencyPrice = useGlobalState(state => state.nativeCurrency.price);
+  //const { targetNetwork } = useTargetNetwork();
+  //const isLocalNetwork = targetNetwork.id === hardhat.id;
 
-  const quickLinks = ["Inicio", "Cómo Funciona", "Beneficios", "Gamificación", "Testimonios", "Contacto"];
+  const quickLinks = [
+    "Inicio",
+    "Cómo Funciona",
+    "Beneficios",
+    "Gamificación",
+    "Testimonios",
+    "Contacto",
+  ];
 
-  const legalLinks = ["Términos y Condiciones", "Política de Privacidad", "Política de Cookies", "Aviso Legal"];
+  const legalLinks = [
+    "Términos y Condiciones",
+    "Política de Privacidad",
+    "Política de Cookies",
+    "Aviso Legal",
+  ];
 
   const socialLinks = [
     { icon: Facebook, href: "#", name: "Facebook" },
@@ -33,7 +46,7 @@ export const Footer = () => {
   return (
     <>
       {/* Footer */}
-      <div className="min-h-0 py-5 px-1 mb-11 lg:mb-0">
+      {/* <div className="min-h-0 py-5 px-1 mb-11 lg:mb-0">
         <div>
           <div className="fixed flex justify-between items-center w-full z-10 p-4 bottom-0 left-0 pointer-events-none">
             <div className="flex flex-col md:flex-row gap-2 pointer-events-auto">
@@ -58,7 +71,7 @@ export const Footer = () => {
             <SwitchTheme className={`pointer-events-auto ${isLocalNetwork ? "self-end md:self-auto" : ""}`} />
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Footer Not Your Jewels */}
       <footer className="bg-[#0A0A1A] text-white relative">
@@ -82,8 +95,8 @@ export const Footer = () => {
                 </span>
               </div>
               <p className="text-gray-300 leading-relaxed mb-6 max-w-md">
-                Democratizando el acceso a la educación superior en Latinoamérica a través de microcréditos inteligentes
-                basados en blockchain.
+                Democratizando el acceso a la educación superior en Latinoamérica a través de
+                microcréditos inteligentes basados en blockchain.
               </p>
 
               {/* Contact Info */}

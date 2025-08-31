@@ -12,7 +12,7 @@ import ProblemSection from "../components/ProblemSection";
 import SolutionSection from "../components/SolutionSection";
 import TestimonialsSection from "../components/TestimonialsSection";
 import { useAccount } from "wagmi";
-import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import { BugAntIcon } from "@heroicons/react/24/outline";
 import { Address } from "~~/components/scaffold-eth";
 
 //import Footer from "../components/Footer";
@@ -39,7 +39,9 @@ const Home = () => {
               <Address address={connectedAddress} />
             </div>
 
-            <p className="text-center text-lg mt-4">Access your educational microcredits and start learning</p>
+            <p className="text-center text-lg mt-4">
+              Access your educational microcredits and start learning
+            </p>
           </div>
 
           <div className="grow bg-base-300 w-full mt-16 px-8 py-12">
@@ -54,7 +56,7 @@ const Home = () => {
                   tab.
                 </p>
               </div>
-              <div className="flex flex-col bg-base-100 px-6 py-8 text-center items-center max-w-xs rounded-3xl sm:px-10 sm:py-10">
+              {/* <div className="flex flex-col bg-base-100 px-6 py-8 text-center items-center max-w-xs rounded-3xl sm:px-10 sm:py-10">
                 <MagnifyingGlassIcon className="h-8 w-8 fill-secondary" />
                 <p className="mt-2">
                   Explore your transactions in the{" "}
@@ -63,7 +65,7 @@ const Home = () => {
                   </Link>{" "}
                   tab.
                 </p>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
