@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { ArrowRight, Play } from "lucide-react";
 
@@ -9,15 +10,18 @@ const HeroSection = () => {
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background with gradient overlay */}
       <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0A0A1A] via-[#003366]/50 to-[#0A0A1A]"></div>
-        <img
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0A0A1A] via-[#003366]/50 to-[#0A0A1A] z-10"></div>
+        <Image
           src="https://images.pexels.com/photos/5940721/pexels-photo-5940721.jpeg"
           alt="Estudiantes universitarios"
-          className="w-full h-full object-cover opacity-30"
+          fill
+          className="object-cover opacity-30"
+          priority
+          sizes="100vw"
         />
 
         {/* Floating pixel art elements */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 z-20">
           <motion.div
             className="absolute top-20 left-10 w-4 h-4 bg-[#FF8FB1] pixelated"
             animate={{ y: [0, -20, 0] }}
@@ -41,7 +45,7 @@ const HeroSection = () => {
         </div>
       </div>
 
-      <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
+      <div className="relative z-30 max-w-4xl mx-auto px-4 text-center">
         <motion.h1
           className="text-5xl md:text-7xl font-bold mb-6 leading-tight"
           initial={{ opacity: 0, y: 30 }}
@@ -88,7 +92,7 @@ const HeroSection = () => {
 
       {/* Scroll indicator */}
       <motion.div
-        className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
+        className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-30"
         animate={{ y: [0, 10, 0] }}
         transition={{ duration: 2, repeat: Infinity }}
       >
