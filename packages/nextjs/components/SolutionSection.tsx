@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { Heart, Star, Zap } from "lucide-react";
 
@@ -71,10 +72,12 @@ const SolutionSection = () => {
             viewport={{ once: true }}
           >
             <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20 hover:bg-white/15 transition-all duration-300">
-              <img
+              <Image
                 src="https://images.pexels.com/photos/5212700/pexels-photo-5212700.jpeg"
                 alt="Estudiante feliz recibiendo apoyo financiero"
                 className="w-full rounded-2xl"
+                width={600} // Añadido: ancho de la imagen
+                height={400} // Añadido: alto de la imagen
               />
 
               {/* Floating elements */}
