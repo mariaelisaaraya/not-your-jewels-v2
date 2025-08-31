@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@heroicons/react": "~2.1.5",
-    "@rainbow-me/rainbowkit": "^2.2.8",
+    "@rainbow-me/rainbowkit": "latest",
     "@tanstack/react-query": "^5.85.6",
     "@uniswap/sdk-core": "~5.8.2",
     "@uniswap/v2-sdk": "~4.6.1",
@@ -35,8 +35,8 @@
     "react-dom": "~19.0.0",
     "react-hot-toast": "~2.4.0",
     "usehooks-ts": "~3.1.0",
-    "viem": "^2.36.0",
-    "wagmi": "^2.16.9",
+    "viem": "latest",
+    "wagmi": "latest",
     "zustand": "~5.0.0"
   },
   "devDependencies": {
