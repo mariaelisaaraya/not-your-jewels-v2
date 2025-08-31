@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { Award, Gift, Target, Trophy } from "lucide-react";
 
@@ -133,10 +134,13 @@ const GamificationSection = () => {
             viewport={{ once: true }}
           >
             <div className="bg-gradient-to-br from-[#FF8FB1]/20 to-[#00AEEF]/20 rounded-3xl p-8 border border-white/10">
-              <img
+              <Image
                 src="https://images.pexels.com/photos/5212317/pexels-photo-5212317.jpeg"
                 alt="Estudiante exitoso usando la plataforma"
                 className="w-full rounded-2xl"
+                width={600} // Añadido: ancho de la imagen
+                height={400} // Añadido: alto de la imagen
+                priority // Opcional: para imágenes importantes que deben cargar primero
               />
             </div>
 
