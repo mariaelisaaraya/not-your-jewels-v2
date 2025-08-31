@@ -106,7 +106,74 @@ Multichain pool setup → Creation and funding across networks
 Challenge design → Implementation of gamified academic challenges
 Cross-chain monitoring → Unified dashboard for metrics
 
+```mermaid
+graph TB
+    %% Student Registration
+    A["👤 Student registers"] --> B["🔒 StudentRegistry.sol"]
+    B --> C["🏫 University APIs"]
+    C --> D{"✅ Validation successful?"}
+    D -->|No| E["❌ Registration rejected"]
+    D -->|Yes| F["📝 MicroLoanPool.sol: Register Student"]
+    F --> G["💾 Store data and calculate creditScore"]
+    G --> H["IdentityResolver.sol: resolve ENS/cross-chain ID"]
+    
+    %% Loan Request on Ethereum
+    H --> I["💰 MicroLoanPool: requestLoan(amount)"]
+    I --> J{"📋 Sufficient credit score?"}
+    J -->|No| K["❌ Loan rejected"]
+    J -->|Yes| L["✅ Emit LoanIssued event"]
+    
+    %% Cross-Chain Lending
+    L --> M["🔗 CrossChainLender.sol: requestLoan(amount, targetChain)"]
+    M --> N["💡 Symbiotic SDK listens to LoanIssued"]
+    N --> O["📤 Request sent to Lisk L2"]
+    O --> P["💵 Funds delivered on Lisk to student"]
+    P --> Q["MicroLoanPool/StudentRegistry updated with loan"]
+    
+    %% Token Bridge
+    I --> R["🔒 TokenBridge.sol: lockTokens(amount, targetChain)"]
+    R --> S["🔁 Symbiotic SDK listens to TokensLocked"]
+    S --> T["💳 releaseTokens on target chain (Lisk)"]
+    
+    %% Loan Repayment
+    P --> U["📅 MicroLoanPool: repayLoan(index, amount)"]
+    U --> V["💵 Funds returned to pool"]
+    V --> W["📊 Update creditScore"]
+    
+    %% Dashboard and Gamification
+    W --> X["📊 React/Next.js Frontend with wagmi"]
+    X --> Y["Display loans, payments and credit score"]
+    X --> Z["🎮 Gamification: academic achievements and rewards"]
+    
+    %% Styling for different blockchain layers
+    %% Ethereum Core (blue)
+    style B fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    style F fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    style G fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    style H fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    style I fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    style L fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    
+    %% Cross-Chain Bridge (orange)
+    style M fill:#fff3e0,stroke:#f57f17,stroke-width:2px
+    style N fill:#fff3e0,stroke:#f57f17,stroke-width:2px
+    style O fill:#fff3e0,stroke:#f57f17,stroke-width:2px
+    style P fill:#fff3e0,stroke:#f57f17,stroke-width:2px
+    
+    %% Lisk L2 (amber)
+    style R fill:#ffe0b2,stroke:#ef6c00,stroke-width:2px
+    style S fill:#ffe0b2,stroke:#ef6c00,stroke-width:2px
+    style T fill:#ffe0b2,stroke:#ef6c00,stroke-width:2px
+    
+    %% Frontend (pink)
+    style X fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    style Y fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    style Z fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+```
+
 ---
+
+
 
 ## 🎯 Accelerated Development with v0  
 Integration with [v0.dev](https://v0.dev) for rapid component development:  
