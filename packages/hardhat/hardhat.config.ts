@@ -125,10 +125,62 @@ const config: HardhatUserConfig = {
       url: "https://alfajores-forno.celo-testnet.org",
       accounts: [deployerPrivateKey],
     },
+    // LISK SEPOLIA CONFIGURATION - FIXED
+    liskSepolia: {
+      url: "https://rpc.sepolia-api.lisk.com",
+      chainId: 4202,
+      accounts: [deployerPrivateKey],
+    },
+    // LISK MAINNET CONFIGURATION
+    lisk: {
+      url: "https://rpc.api.lisk.com",
+      chainId: 1135,
+      accounts: [deployerPrivateKey],
+    },
   },
   // Configuration for harhdat-verify plugin
   etherscan: {
-    apiKey: etherscanApiKey,
+    apiKey: {
+      mainnet: etherscanApiKey,
+      sepolia: etherscanApiKey,
+      arbitrum: etherscanApiKey,
+      arbitrumSepolia: etherscanApiKey,
+      optimism: etherscanApiKey,
+      optimismSepolia: etherscanApiKey,
+      polygon: etherscanApiKey,
+      polygonAmoy: etherscanApiKey,
+      polygonZkEvm: etherscanApiKey,
+      polygonZkEvmCardona: etherscanApiKey,
+      gnosis: etherscanApiKey,
+      chiado: etherscanApiKey,
+      base: etherscanApiKey,
+      baseSepolia: etherscanApiKey,
+      scrollSepolia: etherscanApiKey,
+      scroll: etherscanApiKey,
+      celo: etherscanApiKey,
+      celoAlfajores: etherscanApiKey,
+      //LISK VERIFICATION CONFIG
+      liskSepolia: "abc", // Blockscout doesn't require real API key
+      lisk: "abc",
+    },
+    customChains: [
+      {
+        network: "liskSepolia",
+        chainId: 4202,
+        urls: {
+          apiURL: "https://sepolia-blockscout.lisk.com/api",
+          browserURL: "https://sepolia-blockscout.lisk.com",
+        },
+      },
+      {
+        network: "lisk",
+        chainId: 1135,
+        urls: {
+          apiURL: "https://blockscout.lisk.com/api",
+          browserURL: "https://blockscout.lisk.com",
+        },
+      },
+    ],
   },
   // Configuration for etherscan-verify from hardhat-deploy plugin
   verify: {
