@@ -1,38 +1,38 @@
 "use client";
 
-import React from 'react';
-import { FileText, TrendingUp, Coins } from 'lucide-react';
-import { motion } from 'framer-motion';
+import React from "react";
+import { motion } from "framer-motion";
+import { Coins, FileText, TrendingUp } from "lucide-react";
 
 const HowItWorksSection = () => {
   const steps = [
     {
-      number: '01',
+      number: "01",
       icon: FileText,
-      title: 'Solicita tu microcrédito',
-      description: 'Completa una solicitud simple y recibe aprobación en minutos',
-      color: '#FF8FB1'
+      title: "Solicita tu microcrédito",
+      description: "Completa una solicitud simple y recibe aprobación en minutos",
+      color: "#FF8FB1",
     },
     {
-      number: '02',
+      number: "02",
       icon: TrendingUp,
-      title: 'Mejora tu rendimiento académico',
-      description: 'Estudia, participa y destaca en tus clases para ganar puntos',
-      color: '#00AEEF'
+      title: "Mejora tu rendimiento académico",
+      description: "Estudia, participa y destaca en tus clases para ganar puntos",
+      color: "#00AEEF",
     },
     {
-      number: '03',
+      number: "03",
       icon: Coins,
-      title: 'Recibe incentivos y paga fácilmente',
-      description: 'Gana recompensas por tu progreso y paga con flexibilidad',
-      color: '#00C49A'
-    }
+      title: "Recibe incentivos y paga fácilmente",
+      description: "Gana recompensas por tu progreso y paga con flexibilidad",
+      color: "#00C49A",
+    },
   ];
 
   return (
     <section id="como-funciona" className="py-20 bg-gradient-to-br from-gray-50 to-white text-gray-900">
       <div className="max-w-6xl mx-auto px-4">
-        <motion.div 
+        <motion.div
           className="text-center mb-16"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -42,7 +42,7 @@ const HowItWorksSection = () => {
           <h2 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
             <span className="bg-gradient-to-r from-[#FF8FB1] to-[#00AEEF] bg-clip-text text-transparent">
               Cómo funciona
-            </span>{' '}
+            </span>{" "}
             nuestra plataforma
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
@@ -54,8 +54,8 @@ const HowItWorksSection = () => {
           {steps.map((step, index) => {
             const Icon = step.icon;
             return (
-              <motion.div 
-                key={index} 
+              <motion.div
+                key={index}
                 className="relative group h-full flex flex-col"
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -68,8 +68,8 @@ const HowItWorksSection = () => {
                     {step.number}
                   </div>
                   {/* Icon */}
-                  <motion.div 
-                    className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6" 
+                  <motion.div
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6"
                     style={{ backgroundColor: `${step.color}20` }}
                     whileHover={{ scale: 1.1, rotate: 5 }}
                     transition={{ duration: 0.3 }}
@@ -81,15 +81,13 @@ const HowItWorksSection = () => {
                 <h3 className="text-2xl font-bold mb-4 text-center" style={{ color: step.color }}>
                   {step.title}
                 </h3>
-                <p className="text-gray-600 leading-relaxed text-center flex-1">
-                  {step.description}
-                </p>
+                <p className="text-gray-600 leading-relaxed text-center flex-1">{step.description}</p>
               </motion.div>
             );
           })}
         </div>
 
-        <motion.div 
+        <motion.div
           className="text-center mt-12"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
