@@ -1,24 +1,27 @@
 "use client";
 
-import React from 'react';
-import { AlertTriangle, TrendingDown, Users } from 'lucide-react';
-import { motion } from 'framer-motion';
+import React from "react";
+import { motion } from "framer-motion";
+import { AlertTriangle, TrendingDown, Users } from "lucide-react";
 
 const ProblemSection = () => {
   const countries = [
-    { name: 'Guatemala', percentage: 57, color: '#FF8FB1' },
-    { name: 'Honduras', percentage: 53, color: '#00AEEF' },
-    { name: 'Bolivia', percentage: 16, color: '#00C49A' }
+    { name: "Guatemala", percentage: 57, color: "#FF8FB1" },
+    { name: "Honduras", percentage: 53, color: "#00AEEF" },
+    { name: "Bolivia", percentage: 16, color: "#00C49A" },
   ];
 
   const stats = [
-    { icon: Users, value: '2.3M+', label: 'Estudiantes afectados', color: '#FF8FB1' },
-    { icon: TrendingDown, value: '57%', label: 'Tasa de abandono máxima', color: '#00AEEF' },
-    { icon: AlertTriangle, value: '$8.5B', label: 'Pérdida económica anual', color: '#00C49A' }
+    { icon: Users, value: "2.3M+", label: "Estudiantes afectados", color: "#FF8FB1" },
+    { icon: TrendingDown, value: "57%", label: "Tasa de abandono máxima", color: "#00AEEF" },
+    { icon: AlertTriangle, value: "$8.5B", label: "Pérdida económica anual", color: "#00C49A" },
   ];
 
   return (
-    <section id="problema" className="py-20 bg-gradient-to-br from-gray-50 to-white text-gray-900 relative overflow-hidden">
+    <section
+      id="problema"
+      className="py-20 bg-gradient-to-br from-gray-50 to-white text-gray-900 relative overflow-hidden"
+    >
       {/* Background decorative elements */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute top-20 left-10 w-3 h-3 bg-[#FF8FB1] pixelated"></div>
@@ -28,7 +31,7 @@ const ProblemSection = () => {
 
       <div className="max-w-7xl mx-auto px-4 relative z-10">
         {/* Header */}
-        <motion.div 
+        <motion.div
           className="text-center mb-16"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -36,7 +39,7 @@ const ProblemSection = () => {
           viewport={{ once: true }}
         >
           <h2 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-            Un problema que{' '}
+            Un problema que{" "}
             <span className="bg-gradient-to-r from-[#FF8FB1] via-[#00AEEF] to-[#00C49A] bg-clip-text text-transparent">
               no podemos ignorar
             </span>
@@ -80,7 +83,7 @@ const ProblemSection = () => {
                     <motion.div
                       className="h-5 rounded-full"
                       style={{
-                        background: `linear-gradient(90deg, ${country.color}, ${country.color}80)`
+                        background: `linear-gradient(90deg, ${country.color}, ${country.color}80)`,
                       }}
                       initial={{ width: 0 }}
                       whileInView={{ width: `${country.percentage}%` }}
@@ -111,7 +114,10 @@ const ProblemSection = () => {
                   transition={{ duration: 0.6, delay: 0.8 + index * 0.1 }}
                   viewport={{ once: true }}
                 >
-                  <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: `${stat.color}20` }}>
+                  <div
+                    className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
+                    style={{ backgroundColor: `${stat.color}20` }}
+                  >
                     <Icon className="w-7 h-7" style={{ color: stat.color }} />
                   </div>
                   <div className="text-3xl font-bold mb-2" style={{ color: stat.color }}>
@@ -123,9 +129,9 @@ const ProblemSection = () => {
             })}
           </div>
         </div>
-        
+
         {/* Call to Action */}
-        <motion.div 
+        <motion.div
           className="text-center"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -134,10 +140,12 @@ const ProblemSection = () => {
         >
           <div className="bg-gradient-to-r from-[#FF8FB1]/10 via-[#00AEEF]/10 to-[#00C49A]/10 rounded-3xl p-8 backdrop-blur-sm border border-white/20 max-w-4xl mx-auto">
             <p className="text-xl md:text-2xl text-gray-700 font-medium leading-relaxed mb-6">
-              <strong className="text-[#FF8FB1]">Millones de estudiantes</strong> abandonan sus sueños cada año por falta de opciones financieras accesibles.
+              <strong className="text-[#FF8FB1]">Millones de estudiantes</strong> abandonan sus sueños cada año por
+              falta de opciones financieras accesibles.
             </p>
             <p className="text-lg text-gray-600 leading-relaxed">
-              Es hora de cambiar esta realidad con soluciones innovadoras que protejan tanto el futuro educativo como el patrimonio familiar.
+              Es hora de cambiar esta realidad con soluciones innovadoras que protejan tanto el futuro educativo como el
+              patrimonio familiar.
             </p>
           </div>
         </motion.div>
