@@ -1,43 +1,43 @@
 "use client";
 
-import React from 'react';
-import { Zap, Heart, Star } from 'lucide-react';
-import { motion } from 'framer-motion';
+import React from "react";
+import { motion } from "framer-motion";
+import { Heart, Star, Zap } from "lucide-react";
 
 const SolutionSection = () => {
   const features = [
     {
       icon: Zap,
-      title: 'Financiamiento rápido y flexible',
-      description: 'Accede a microcréditos en minutos, sin complicaciones burocráticas'
+      title: "Financiamiento rápido y flexible",
+      description: "Accede a microcréditos en minutos, sin complicaciones burocráticas",
     },
     {
       icon: Heart,
-      title: 'Pagos pequeños o tras graduarte',
-      description: 'Paga lo que puedas durante tus estudios o comienza después de graduarte'
+      title: "Pagos pequeños o tras graduarte",
+      description: "Paga lo que puedas durante tus estudios o comienza después de graduarte",
     },
     {
       icon: Star,
-      title: 'Incentivos y becas vía Stellar',
-      description: 'Gana recompensas y becas automáticas por tu rendimiento académico'
-    }
+      title: "Incentivos y becas vía Stellar",
+      description: "Gana recompensas y becas automáticas por tu rendimiento académico",
+    },
   ];
 
   return (
     <section id="solucion" className="py-20 bg-gradient-to-br from-[#00C49A] to-[#00AEEF] relative overflow-hidden">
       {/* Background decorative elements */}
       <div className="absolute inset-0">
-        <motion.div 
+        <motion.div
           className="absolute top-20 left-20 w-4 h-4 bg-white/20 pixelated"
           animate={{ y: [0, -20, 0] }}
           transition={{ duration: 4, repeat: Infinity }}
         />
-        <motion.div 
+        <motion.div
           className="absolute bottom-20 right-20 w-3 h-3 bg-white/30 pixelated"
           animate={{ y: [0, -15, 0] }}
           transition={{ duration: 3, repeat: Infinity, delay: 1 }}
         />
-        <motion.div 
+        <motion.div
           className="absolute top-1/2 right-1/4 w-5 h-5 bg-white/15 pixelated"
           animate={{ y: [0, -25, 0] }}
           transition={{ duration: 5, repeat: Infinity, delay: 2 }}
@@ -45,7 +45,7 @@ const SolutionSection = () => {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 relative z-10">
-        <motion.div 
+        <motion.div
           className="text-center mb-16"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -53,9 +53,8 @@ const SolutionSection = () => {
           viewport={{ once: true }}
         >
           <h2 className="text-4xl md:text-6xl font-bold mb-6 text-white leading-tight">
-            Con Not Your Jewels ningún estudiante debería{' '}
-            <span className="text-[#FFE4E1]">perder sus joyas</span> para no perder su{' '}
-            <span className="text-[#FFE4E1]">futuro</span>
+            Con Not Your Jewels ningún estudiante debería <span className="text-[#FFE4E1]">perder sus joyas</span> para
+            no perder su <span className="text-[#FFE4E1]">futuro</span>
           </h2>
           <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
             Nuestra plataforma revoluciona el acceso a la educación superior con tecnología blockchain
@@ -64,7 +63,7 @@ const SolutionSection = () => {
 
         <div className="grid lg:grid-cols-2 gap-12 items-center mb-16">
           {/* Illustration */}
-          <motion.div 
+          <motion.div
             className="relative"
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -77,14 +76,14 @@ const SolutionSection = () => {
                 alt="Estudiante feliz recibiendo apoyo financiero"
                 className="w-full rounded-2xl"
               />
-              
+
               {/* Floating elements */}
-              <motion.div 
+              <motion.div
                 className="absolute -top-4 -left-4 w-6 h-6 bg-[#FFE4E1] pixelated"
                 animate={{ rotate: [0, 360] }}
                 transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
               />
-              <motion.div 
+              <motion.div
                 className="absolute -bottom-4 -right-4 w-8 h-8 bg-white/80 pixelated"
                 animate={{ scale: [1, 1.2, 1] }}
                 transition={{ duration: 2, repeat: Infinity }}
@@ -93,7 +92,7 @@ const SolutionSection = () => {
           </motion.div>
 
           {/* Features */}
-          <motion.div 
+          <motion.div
             className="space-y-8"
             initial={{ opacity: 0, x: 30 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -103,8 +102,8 @@ const SolutionSection = () => {
             {features.map((feature, index) => {
               const Icon = feature.icon;
               return (
-                <motion.div 
-                  key={index} 
+                <motion.div
+                  key={index}
                   className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300 group"
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -131,7 +130,7 @@ const SolutionSection = () => {
         </div>
 
         {/* Bottom CTA */}
-        <motion.div 
+        <motion.div
           className="text-center"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
