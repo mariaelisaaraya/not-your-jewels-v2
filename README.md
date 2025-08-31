@@ -234,10 +234,8 @@ This event, open to developers, designers, cryptographers, project managers, stu
 
 ## 📞 Contact  
 
-- **Website**: [not-your-jewels.vercel.app](https://not-your-jewels.vercel.app/)  
+- **Website**: [not-your-jewels.vercel.app](https://not-your-jewels-v2-nextjs.vercel.app/ )  
 - **Email**: notyourjewelsdapp@gmail.com  
-- **Dorahacks**: [Project Page](https://dorahacks.io/buidl/30925/)  
-- **Twitter**: [@notyourjewelslatam](https://twitter.com/notyourjewelslatam)  
 - **Instagram**: [@notyourjewelslatam](https://instagram.com/notyourjewelslatam)  
 
 ---
