@@ -3191,7 +3191,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rainbow-me/rainbowkit@npm:^2.2.8":
+"@rainbow-me/rainbowkit@npm:latest":
   version: 2.2.8
   resolution: "@rainbow-me/rainbowkit@npm:2.2.8"
   dependencies:
@@ -3533,7 +3533,7 @@ __metadata:
   resolution: "@se-2/nextjs@workspace:packages/nextjs"
   dependencies:
     "@heroicons/react": ~2.1.5
-    "@rainbow-me/rainbowkit": ^2.2.8
+    "@rainbow-me/rainbowkit": latest
     "@tailwindcss/postcss": 4.0.15
     "@tanstack/react-query": ^5.85.6
     "@trivago/prettier-plugin-sort-imports": ~4.3.0
@@ -3568,8 +3568,8 @@ __metadata:
     typescript: ~5.8.2
     usehooks-ts: ~3.1.0
     vercel: ~39.1.3
-    viem: ^2.36.0
-    wagmi: ^2.16.9
+    viem: latest
+    wagmi: latest
     zustand: ~5.0.0
   languageName: unknown
   linkType: soft
@@ -17234,7 +17234,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"viem@npm:>=2.29.0, viem@npm:^2.1.1, viem@npm:^2.27.0, viem@npm:^2.27.2, viem@npm:^2.31.7, viem@npm:^2.36.0":
+"viem@npm:>=2.29.0, viem@npm:^2.1.1, viem@npm:^2.27.0, viem@npm:^2.27.2, viem@npm:^2.31.7, viem@npm:latest":
   version: 2.36.0
   resolution: "viem@npm:2.36.0"
   dependencies:
@@ -17274,7 +17274,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"wagmi@npm:^2.16.9":
+"wagmi@npm:latest":
   version: 2.16.9
   resolution: "wagmi@npm:2.16.9"
   dependencies:
