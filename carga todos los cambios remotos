@@ -1,0 +1,1585 @@
+[1mdiff --git a/packages/hardhat/contracts/MicroLoanPool.sol b/packages/hardhat/contracts/MicroLoanPool.sol[m
+[1mnew file mode 100644[m
+[1mindex 0000000..3a56d6a[m
+[1m--- /dev/null[m
+[1m+++ b/packages/hardhat/contracts/MicroLoanPool.sol[m
+[36m@@ -0,0 +1,217 @@[m
+[32m+[m[32m// SPDX-License-Identifier: MIT[m
+[32m+[m[32mpragma solidity ^0.8.19;[m
+[32m+[m
+[32m+[m[32mcontract MicroLoanPool {[m
+[32m+[m[32m    struct Student {[m
+[32m+[m[32m        string name;[m
+[32m+[m[32m        string university;[m
+[32m+[m[32m        uint256 academicScore;[m
+[32m+[m[32m        uint256 totalBorrowed;[m
+[32m+[m[32m        uint256 totalRepaid;[m
+[32m+[m[32m        bool isActive;[m
+[32m+[m[32m        uint256 creditScore;[m
+[32m+[m[32m    }[m
+[32m+[m[41m    [m
+[32m+[m[32m    struct Loan {[m
+[32m+[m[32m        uint256 amount;[m
+[32m+[m[32m        uint256 interestRate;[m
+[32m+[m[32m        uint256 dueDate;[m
+[32m+[m[32m        bool isRepaid;[m
+[32m+[m[32m        uint256 repaidAmount;[m
+[32m+[m[32m    }[m
+[32m+[m[41m    [m
+[32m+[m[32m    mapping(address => Student) public students;[m
+[32m+[m[32m    mapping(address => Loan[]) public studentLoans;[m
+[32m+[m[32m    mapping(address => uint256) public deposits; // Para inversores[m
+[32m+[m[41m    [m
+[32m+[m[32m    address[] public studentAddresses;[m
+[32m+[m[32m    address[] public investors;[m
+[32m+[m[41m    [m
+[32m+[m[32m    uint256 public totalPoolBalance;[m
+[32m+[m[32m    uint256 public totalLoansIssued;[m
+[32m+[m[41m    [m
+[32m+[m[32m    event StudentRegistered(address indexed student, string name, uint256 academicScore);[m
+[32m+[m[32m    event LoanIssued(address indexed student, uint256 amount, uint256 interestRate);[m
+[32m+[m[32m    event LoanRepaid(address indexed student, uint256 amount);[m
+[32m+[m[32m    event DepositMade(address indexed investor, uint256 amount);[m
+[32m+[m[41m    [m
+[32m+[m[32m    // Registro de estudiantes[m
+[32m+[m[32m    function registerStudent([m
+[32m+[m[32m        string memory _name,[m
+[32m+[m[32m        string memory _university,[m
+[32m+[m[32m        uint256 _academicScore[m
+[32m+[m[32m    ) external {[m
+[32m+[m[32m        require(_academicScore >= 0 && _academicScore <= 100, "Invalid academic score");[m
+[32m+[m[32m        require(!students[msg.sender].isActive, "Student already registered");[m
+[32m+[m[41m        [m
+[32m+[m[32m        students[msg.sender] = Student({[m
+[32m+[m[32m            name: _name,[m
+[32m+[m[32m            university: _university,[m
+[32m+[m[32m            academicScore: _academicScore,[m
+[32m+[m[32m            totalBorrowed: 0,[m
+[32m+[m[32m            totalRepaid: 0,[m
+[32m+[m[32m            isActive: true,[m
+[32m+[m[32m            creditScore: calculateInitialCreditScore(_academicScore)[m
+[32m+[m[32m        });[m
+[32m+[m[41m        [m
+[32m+[m[32m        studentAddresses.push(msg.sender);[m
+[32m+[m[32m        emit StudentRegistered(msg.sender, _name, _academicScore);[m
+[32m+[m[32m    }[m
+[32m+[m[41m    [m
+[32m+[m[32m    // Calcular score crediticio inicial basado en rendimiento académico[m
+[32m+[m[32m    function calculateInitialCreditScore(uint256 _academicScore) internal pure returns (uint256) {[m
+[32m+[m[32m        if (_academicScore >= 90) return 850;[m
+[32m+[m[32m        if (_academicScore >= 80) return 750;[m
+[32m+[m[32m        if (_academicScore >= 70) return 650;[m
+[32m+[m[32m        if (_academicScore >= 60) return 550;[m
+[32m+[m[32m        return 450;[m
+[32m+[m[32m    }[m
+[32m+[m[41m    [m
+[32m+[m[32m    // Inversores depositan fondos[m
+[32m+[m[32m    function deposit() external payable {[m
+[32m+[m[32m        require(msg.value > 0, "Deposit must be greater than 0");[m
+[32m+[m[41m        [m
+[32m+[m[32m        if (deposits[msg.sender] == 0) {[m
+[32m+[m[32m            investors.push(msg.sender);[m
+[32m+[m[32m        }[m
+[32m+[m[41m        [m
+[32m+[m[32m        deposits[msg.sender] += msg.value;[m
+[32m+[m[32m        totalPoolBalance += msg.value;[m
+[32m+[m[41m        [m
+[32m+[m[32m        emit DepositMade(msg.sender, msg.value);[m
+[32m+[m[32m    }[m
+[32m+[m[41m    [m
+[32m+[m[32m    // Estudiantes solicitan préstamos[m
+[32m+[m[32m    function requestLoan(uint256 _amount) external {[m
+[32m+[m[32m        require(students[msg.sender].isActive, "Student not registered");[m
+[32m+[m[32m        require(_amount > 0, "Loan amount must be greater than 0");[m
+[32m+[m[32m        require(_amount <= getMaxLoanAmount(msg.sender), "Requested amount exceeds credit limit");[m
+[32m+[m[32m        require(totalPoolBalance >= _amount, "Insufficient pool balance");[m
+[32m+[m[41m        [m
+[32m+[m[32m        uint256 interestRate = calculateInterestRate(msg.sender);[m
+[32m+[m[32m        uint256 dueDate = block.timestamp + 180 days; // 6 meses para pagar[m
+[32m+[m[41m        [m
+[32m+[m[32m        studentLoans[msg.sender].push(Loan({[m
+[32m+[m[32m            amount: _amount,[m
+[32m+[m[32m            interestRate: interestRate,[m
+[32m+[m[32m            dueDate: dueDate,[m
+[32m+[m[32m            isRepaid: false,[m
+[32m+[m[32m            repaidAmount: 0[m
+[32m+[m[32m        }));[m
+[32m+[m[41m        [m
+[32m+[m[32m        students[msg.sender].totalBorrowed += _amount;[m
+[32m+[m[32m        totalPoolBalance -= _amount;[m
+[32m+[m[32m        totalLoansIssued += _amount;[m
+[32m+[m[41m        [m
+[32m+[m[32m        // Transferir fondos al estudiante[m
+[32m+[m[32m        payable(msg.sender).transfer(_amount);[m
+[32m+[m[41m        [m
+[32m+[m[32m        emit LoanIssued(msg.sender, _amount, interestRate);[m
+[32m+[m[32m    }[m
+[32m+[m[41m    [m
+[32m+[m[32m    // Calcular monto máximo de préstamo basado en credit score[m
+[32m+[m[32m    function getMaxLoanAmount(address _student) public view returns (uint256) {[m
+[32m+[m[32m        uint256 creditScore = students[_student].creditScore;[m
+[32m+[m[41m        [m
+[32m+[m[32m        if (creditScore >= 800) return 1 ether;[m
+[32m+[m[32m        if (creditScore >= 700) return 0.5 ether;[m
+[32m+[m[32m        if (creditScore >= 600) return 0.3 ether;[m
+[32m+[m[32m        return 0.1 ether;[m
+[32m+[m[32m    }[m
+[32m+[m[41m    [m
+[32m+[m[32m    // Calcular tasa de interés basada en credit score[m
+[32m+[m[32m    function calculateInterestRate(address _student) internal view returns (uint256) {[m
+[32m+[m[32m        uint256 creditScore = students[_student].creditScore;[m
+[32m+[m[41m        [m
+[32m+[m[32m        if (creditScore >= 800) return 5;  // 5% anual[m
+[32m+[m[32m        if (creditScore >= 700) return 8;  // 8% anual[m
+[32m+[m[32m        if (creditScore >= 600) return 12; // 12% anual[m
+[32m+[m[32m        return 15; // 15% anual[m
+[32m+[m[32m    }[m
+[32m+[m[41m    [m
+[32m+[m[32m    // Repagar préstamo[m
+[32m+[m[32m    function repayLoan(uint256 _loanIndex) external payable {[m
+[32m+[m[32m        require(_loanIndex < studentLoans[msg.sender].length, "Invalid loan index");[m
+[32m+[m[41m        [m
+[32m+[m[32m        Loan storage loan = studentLoans[msg.sender][_loanIndex];[m
+[32m+[m[32m        require(!loan.isRepaid, "Loan already repaid");[m
+[32m+[m[32m        require(msg.value > 0, "Payment must be greater than 0");[m
+[32m+[m[41m        [m
+[32m+[m[32m        loan.repaidAmount += msg.value;[m
+[32m+[m[32m        students[msg.sender].totalRepaid += msg.value;[m
+[32m+[m[32m        totalPoolBalance += msg.value;[m
+[32m+[m[41m        [m
+[32m+[m[32m        // Calcular total adeudado (capital + interés)[m
+[32m+[m[32m        uint256 totalOwed = loan.amount + (loan.amount * loan.interestRate / 100);[m
+[32m+[m[41m        [m
+[32m+[m[32m        if (loan.repaidAmount >= totalOwed) {[m
+[32m+[m[32m            loan.isRepaid = true;[m
+[32m+[m[32m            // Mejorar credit score por pago completo[m
+[32m+[m[32m            if (block.timestamp <= loan.dueDate) {[m
+[32m+[m[32m                students[msg.sender].creditScore += 10; // Bonus por pago a tiempo[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+[32m+[m[41m        [m
+[32m+[m[32m        emit LoanRepaid(msg.sender, msg.value);[m
+[32m+[m[32m    }[m
+[32m+[m[41m    [m
+[32m+[m[32m    // Obtener información del estudiante[m
+[32m+[m[32m    function getStudentInfo(address _student) external view returns ([m
+[32m+[m[32m        string memory name,[m
+[32m+[m[32m        string memory university,[m
+[32m+[m[32m        uint256 academicScore,[m
+[32m+[m[32m        uint256 totalBorrowed,[m
+[32m+[m[32m        uint256 totalRepaid,[m
+[32m+[m[32m        uint256 creditScore,[m
+[32m+[m[32m        bool isActive[m
+[32m+[m[32m    ) {[m
+[32m+[m[32m        Student memory student = students[_student];[m
+[32m+[m[32m        return ([m
+[32m+[m[32m            student.name,[m
+[32m+[m[32m            student.university,[m
+[32m+[m[32m            student.academicScore,[m
+[32m+[m[32m            student.totalBorrowed,[m
+[32m+[m[32m            student.totalRepaid,[m
+[32m+[m[32m            student.creditScore,[m
+[32m+[m[32m            student.isActive[m
+[32m+[m[32m        );[m
+[32m+[m[32m    }[m
+[32m+[m[41m    [m
+[32m+[m[32m    // Obtener préstamos del estudiante[m
+[32m+[m[32m    function getStudentLoans(address _student) external view returns ([m
+[32m+[m[32m        uint256[] memory amounts,[m
+[32m+[m[32m        uint256[] memory interestRates,[m
+[32m+[m[32m        uint256[] memory dueDates,[m
+[32m+[m[32m        bool[] memory repaidStatus[m
+[32m+[m[32m    ) {[m
+[32m+[m[32m        Loan[] memory loans = studentLoans[_student];[m
+[32m+[m[32m        uint256 length = loans.length;[m
+[32m+[m[41m        [m
+[32m+[m[32m        amounts = new uint256[](length);[m
+[32m+[m[32m        interestRates = new uint256[](length);[m
+[32m+[m[32m        dueDates = new uint256[](length);[m
+[32m+[m[32m        repaidStatus = new bool[](length);[m
+[32m+[m[41m        [m
+[32m+[m[32m        for (uint256 i = 0; i < length; i++) {[m
+[32m+[m[32m            amounts[i] = loans[i].amount;[m
+[32m+[m[32m            interestRates[i] = loans[i].interestRate;[m
+[32m+[m[32m            dueDates[i] = loans[i].dueDate;[m
+[32m+[m[32m            repaidStatus[i] = loans[i].isRepaid;[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m[41m    [m
+[32m+[m[32m    // Estadísticas del pool[m
+[32m+[m[32m    function getPoolStats() external view returns ([m
+[32m+[m[32m        uint256 totalBalance,[m
+[32m+[m[32m        uint256 totalIssued,[m
+[32m+[m[32m        uint256 totalStudents,[m
+[32m+[m[32m        uint256 totalInvestors[m
+[32m+[m[32m    ) {[m
+[32m+[m[32m        return ([m
+[32m+[m[32m            totalPoolBalance,[m
+[32m+[m[32m            totalLoansIssued,[m
+[32m+[m[32m            studentAddresses.length,[m
+[32m+[m[32m            investors.length[m
+[32m+[m[32m        );[m
+[32m+[m[32m    }[m
+[32m+[m[32m}[m
+\ No newline at end of file[m
+[1mdiff --git a/packages/hardhat/contracts/StudentRegistry.sol b/packages/hardhat/contracts/StudentRegistry.sol[m
+[1mnew file mode 100644[m
+[1mindex 0000000..8d6c2a9[m
+[1m--- /dev/null[m
+[1m+++ b/packages/hardhat/contracts/StudentRegistry.sol[m
+[36m@@ -0,0 +1,36 @@[m
+[32m+[m[32m// StudentRegistry.sol -  simple para testeo de app[m
+[32m+[m[32mpragma solidity ^0.8.19;[m
+[32m+[m
+[32m+[m[32mcontract StudentRegistry {[m
+[32m+[m[32m    struct Student {[m
+[32m+[m[32m        string name;[m
+[32m+[m[32m        string university;[m
+[32m+[m[32m        uint256 academicScore;[m
+[32m+[m[32m        bool isRegistered;[m
+[32m+[m[32m    }[m
+[32m+[m[41m    [m
+[32m+[m[32m    mapping(address => Student) public students;[m
+[32m+[m[32m    address[] public studentAddresses;[m
+[32m+[m[41m    [m
+[32m+[m[32m    event StudentRegistered(address student, string name);[m
+[32m+[m[41m    [m
+[32m+[m[32m    function registerStudent([m
+[32m+[m[32m        string memory _name,[m[41m [m
+[32m+[m[32m        string memory _university,[m
+[32m+[m[32m        uint256 _academicScore[m
+[32m+[m[32m    ) external {[m
+[32m+[m[32m        students[msg.sender] = Student({[m
+[32m+[m[32m            name: _name,[m
+[32m+[m[32m            university: _university,[m
+[32m+[m[32m            academicScore: _academicScore,[m
+[32m+[m[32m            isRegistered: true[m
+[32m+[m[32m        });[m
+[32m+[m[41m        [m
+[32m+[m[32m        studentAddresses.push(msg.sender);[m
+[32m+[m[32m        emit StudentRegistered(msg.sender, _name);[m
+[32m+[m[32m    }[m
+[32m+[m[41m    [m
+[32m+[m[32m    function getStudentCount() external view returns (uint256) {[m
+[32m+[m[32m        return studentAddresses.length;[m
+[32m+[m[32m    }[m
+[32m+[m[32m}[m
+\ No newline at end of file[m
+[1mdiff --git a/packages/hardhat/deploy/01_deploy_student_registry.ts b/packages/hardhat/deploy/01_deploy_student_registry.ts[m
+[1mnew file mode 100644[m
+[1mindex 0000000..f731cdb[m
+[1m--- /dev/null[m
+[1m+++ b/packages/hardhat/deploy/01_deploy_student_registry.ts[m
+[36m@@ -0,0 +1,16 @@[m
+[32m+[m[32mimport { HardhatRuntimeEnvironment } from "hardhat/types";[m
+[32m+[m[32mimport { DeployFunction } from "hardhat-deploy/types";[m
+[32m+[m
+[32m+[m[32mconst deployStudentRegistry: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {[m
+[32m+[m[32m  const { deployer } = await hre.getNamedAccounts();[m
+[32m+[m[32m  const { deploy } = hre.deployments;[m
+[32m+[m
+[32m+[m[32m  await deploy("StudentRegistry", {[m
+[32m+[m[32m    from: deployer,[m
+[32m+[m[32m    log: true,[m
+[32m+[m[32m    autoMine: true,[m
+[32m+[m[32m  });[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mexport default deployStudentRegistry;[m
+[32m+[m[32mdeployStudentRegistry.tags = ["StudentRegistry"];[m
+[1mdiff --git a/packages/hardhat/deploy/02_deploy_microloan_pool.ts b/packages/hardhat/deploy/02_deploy_microloan_pool.ts[m
+[1mnew file mode 100644[m
+[1mindex 0000000..b0530df[m
+[1m--- /dev/null[m
+[1m+++ b/packages/hardhat/deploy/02_deploy_microloan_pool.ts[m
+[36m@@ -0,0 +1,16 @@[m
+[32m+[m[32mimport { HardhatRuntimeEnvironment } from "hardhat/types";[m
+[32m+[m[32mimport { DeployFunction } from "hardhat-deploy/types";[m
+[32m+[m
+[32m+[m[32mconst deployMicroLoanPool: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {[m
+[32m+[m[32m  const { deployer } = await hre.getNamedAccounts();[m
+[32m+[m[32m  const { deploy } = hre.deployments;[m
+[32m+[m
+[32m+[m[32m  await deploy("MicroLoanPool", {[m
+[32m+[m[32m    from: deployer,[m
+[32m+[m[32m    log: true,[m
+[32m+[m[32m    autoMine: true,[m
+[32m+[m[32m  });[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mexport default deployMicroLoanPool;[m
+[32m+[m[32mdeployMicroLoanPool.tags = ["MicroLoanPool"];[m
+[1mdiff --git a/packages/hardhat/hardhat.config.ts b/packages/hardhat/hardhat.config.ts[m
+[1mindex 7130ad3..14092c4 100644[m
+[1m--- a/packages/hardhat/hardhat.config.ts[m
+[1m+++ b/packages/hardhat/hardhat.config.ts[m
+[36m@@ -125,10 +125,62 @@[m [mconst config: HardhatUserConfig = {[m
+       url: "https://alfajores-forno.celo-testnet.org",[m
+       accounts: [deployerPrivateKey],[m
+     },[m
+[32m+[m[32m    // LISK SEPOLIA CONFIGURATION - FIXED[m
+[32m+[m[32m    liskSepolia: {[m
+[32m+[m[32m      url: "https://rpc.sepolia-api.lisk.com",[m
+[32m+[m[32m      chainId: 4202,[m
+[32m+[m[32m      accounts: [deployerPrivateKey],[m
+[32m+[m[32m    },[m
+[32m+[m[32m    // LISK MAINNET CONFIGURATION[m
+[32m+[m[32m    lisk: {[m
+[32m+[m[32m      url: "https://rpc.api.lisk.com",[m
+[32m+[m[32m      chainId: 1135,[m
+[32m+[m[32m      accounts: [deployerPrivateKey],[m
+[32m+[m[32m    },[m
+   },[m
+   // Configuration for harhdat-verify plugin[m
+   etherscan: {[m
+[31m-    apiKey: etherscanApiKey,[m
+[32m+[m[32m    apiKey: {[m
+[32m+[m[32m      mainnet: etherscanApiKey,[m
+[32m+[m[32m      sepolia: etherscanApiKey,[m
+[32m+[m[32m      arbitrum: etherscanApiKey,[m
+[32m+[m[32m      arbitrumSepolia: etherscanApiKey,[m
+[32m+[m[32m      optimism: etherscanApiKey,[m
+[32m+[m[32m      optimismSepolia: etherscanApiKey,[m
+[32m+[m[32m      polygon: etherscanApiKey,[m
+[32m+[m[32m      polygonAmoy: etherscanApiKey,[m
+[32m+[m[32m      polygonZkEvm: etherscanApiKey,[m
+[32m+[m[32m      polygonZkEvmCardona: etherscanApiKey,[m
+[32m+[m[32m      gnosis: etherscanApiKey,[m
+[32m+[m[32m      chiado: etherscanApiKey,[m
+[32m+[m[32m      base: etherscanApiKey,[m
+[32m+[m[32m      baseSepolia: etherscanApiKey,[m
+[32m+[m[32m      scrollSepolia: etherscanApiKey,[m
+[32m+[m[32m      scroll: etherscanApiKey,[m
+[32m+[m[32m      celo: etherscanApiKey,[m
+[32m+[m[32m      celoAlfajores: etherscanApiKey,[m
+[32m+[m[32m      //LISK VERIFICATION CONFIG[m
+[32m+[m[32m      liskSepolia: "abc", // Blockscout doesn't require real API key[m
+[32m+[m[32m      lisk: "abc",[m
+[32m+[m[32m    },[m
+[32m+[m[32m    customChains: [[m
+[32m+[m[32m      {[m
+[32m+[m[32m        network: "liskSepolia",[m
+[32m+[m[32m        chainId: 4202,[m
+[32m+[m[32m        urls: {[m
+[32m+[m[32m          apiURL: "https://sepolia-blockscout.lisk.com/api",[m
+[32m+[m[32m          browserURL: "https://sepolia-blockscout.lisk.com",[m
+[32m+[m[32m        },[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        network: "lisk",[m
+[32m+[m[32m        chainId: 1135,[m
+[32m+[m[32m        urls: {[m
+[32m+[m[32m          apiURL: "https://blockscout.lisk.com/api",[m
+[32m+[m[32m          browserURL: "https://blockscout.lisk.com",[m
+[32m+[m[32m        },[m
+[32m+[m[32m      },[m
+[32m+[m[32m    ],[m
+   },[m
+   // Configuration for etherscan-verify from hardhat-deploy plugin[m
+   verify: {[m
+[1mdiff --git a/packages/nextjs/app/page.tsx b/packages/nextjs/app/page.tsx[m
+[1mindex c3acb00..acaa4e6 100644[m
+[1m--- a/packages/nextjs/app/page.tsx[m
+[1m+++ b/packages/nextjs/app/page.tsx[m
+[36m@@ -1,68 +1,310 @@[m
+ "use client";[m
+ [m
+[31m-import Link from "next/link";[m
+[32m+[m[32mimport { useState } from "react";[m
+ import type { NextPage } from "next";[m
+[32m+[m[32mimport { parseEther } from "viem";[m
+ import { useAccount } from "wagmi";[m
+[31m-import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";[m
+ import { Address } from "~~/components/scaffold-eth";[m
+[32m+[m[32mimport { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";[m
+ [m
+ const Home: NextPage = () => {[m
+   const { address: connectedAddress } = useAccount();[m
+ [m
+[32m+[m[32m  // Estados para formularios[m
+[32m+[m[32m  const [studentName, setStudentName] = useState("");[m
+[32m+[m[32m  const [university, setUniversity] = useState("");[m
+[32m+[m[32m  const [academicScore, setAcademicScore] = useState("");[m
+[32m+[m[32m  const [loanAmount, setLoanAmount] = useState("");[m
+[32m+[m[32m  const [depositAmount, setDepositAmount] = useState("");[m
+[32m+[m[32m  const [repayAmount, setRepayAmount] = useState("");[m
+[32m+[m[32m  const [activeTab, setActiveTab] = useState("student");[m
+[32m+[m
+[32m+[m[32m  // Hooks para leer contratos[m
+[32m+[m[32m  const { data: studentInfo } = useScaffoldReadContract({[m
+[32m+[m[32m    contractName: "MicroLoanPool",[m
+[32m+[m[32m    functionName: "getStudentInfo",[m
+[32m+[m[32m    args: [connectedAddress],[m
+[32m+[m[32m  });[m
+[32m+[m
+[32m+[m[32m  const { data: poolStats } = useScaffoldReadContract({[m
+[32m+[m[32m    contractName: "MicroLoanPool",[m
+[32m+[m[32m    functionName: "getPoolStats",[m
+[32m+[m[32m  });[m
+[32m+[m
+[32m+[m[32m  const { data: maxLoanAmount } = useScaffoldReadContract({[m
+[32m+[m[32m    contractName: "MicroLoanPool",[m
+[32m+[m[32m    functionName: "getMaxLoanAmount",[m
+[32m+[m[32m    args: [connectedAddress],[m
+[32m+[m[32m  });[m
+[32m+[m
+[32m+[m[32m  // Hooks para escribir contratos[m
+[32m+[m[32m  const { writeContractAsync: registerStudent } = useScaffoldWriteContract("MicroLoanPool");[m
+[32m+[m[32m  const { writeContractAsync: requestLoan } = useScaffoldWriteContract("MicroLoanPool");[m
+[32m+[m[32m  const { writeContractAsync: deposit } = useScaffoldWriteContract("MicroLoanPool");[m
+[32m+[m[32m  const { writeContractAsync: repayLoan } = useScaffoldWriteContract("MicroLoanPool");[m
+[32m+[m
+[32m+[m[32m  // Funciones del contrato[m
+[32m+[m[32m  const handleRegisterStudent = async () => {[m
+[32m+[m[32m    try {[m
+[32m+[m[32m      await registerStudent({[m
+[32m+[m[32m        functionName: "registerStudent",[m
+[32m+[m[32m        args: [studentName, university, BigInt(academicScore)],[m
+[32m+[m[32m      });[m
+[32m+[m[32m      alert("El estudiante se registró exitosamente!");[m
+[32m+[m[32m      setStudentName("");[m
+[32m+[m[32m      setUniversity("");[m
+[32m+[m[32m      setAcademicScore("");[m
+[32m+[m[32m    } catch (error) {[m
+[32m+[m[32m      console.error("Error registrando estudiante:", error);[m
+[32m+[m[32m    }[m
+[32m+[m[32m  };[m
+[32m+[m
+[32m+[m[32m  const handleRequestLoan = async () => {[m
+[32m+[m[32m    try {[m
+[32m+[m[32m      await requestLoan({[m
+[32m+[m[32m        functionName: "requestLoan",[m
+[32m+[m[32m        args: [parseEther(loanAmount)],[m
+[32m+[m[32m      });[m
+[32m+[m[32m      alert("Préstamo solicitado exitosamente!");[m
+[32m+[m[32m      setLoanAmount("");[m
+[32m+[m[32m    } catch (error) {[m
+[32m+[m[32m      console.error("Error solicitando préstamo:", error);[m
+[32m+[m[32m    }[m
+[32m+[m[32m  };[m
+[32m+[m
+[32m+[m[32m  const handleDeposit = async () => {[m
+[32m+[m[32m    try {[m
+[32m+[m[32m      await deposit({[m
+[32m+[m[32m        functionName: "deposit",[m
+[32m+[m[32m        value: parseEther(depositAmount),[m
+[32m+[m[32m      });[m
+[32m+[m[32m      alert("Depósito realizado exitosamente!");[m
+[32m+[m[32m      setDepositAmount("");[m
+[32m+[m[32m    } catch (error) {[m
+[32m+[m[32m      console.error("Error realizando depósito:", error);[m
+[32m+[m[32m    }[m
+[32m+[m[32m  };[m
+[32m+[m
+[32m+[m[32m  const handleRepayLoan = async () => {[m
+[32m+[m[32m    try {[m
+[32m+[m[32m      await repayLoan({[m
+[32m+[m[32m        functionName: "repayLoan",[m
+[32m+[m[32m        args: [BigInt(0)], // Primer préstamo[m
+[32m+[m[32m        value: parseEther(repayAmount),[m
+[32m+[m[32m      });[m
+[32m+[m[32m      alert("Pago realizado exitosamente!");[m
+[32m+[m[32m      setRepayAmount("");[m
+[32m+[m[32m    } catch (error) {[m
+[32m+[m[32m      console.error("Error realizando pago:", error);[m
+[32m+[m[32m    }[m
+[32m+[m[32m  };[m
+[32m+[m
+   return ([m
+     <>[m
+[31m-      <div className="flex items-center flex-col grow pt-10">[m
+[31m-        <div className="px-5">[m
+[31m-          <h1 className="text-center">[m
+[31m-            <span className="block text-2xl mb-2">Welcome to</span>[m
+[31m-            <span className="block text-4xl font-bold">Scaffold-ETH 2</span>[m
+[31m-          </h1>[m
+[31m-          <div className="flex justify-center items-center space-x-2 flex-col">[m
+[31m-            <p className="my-2 font-medium">Connected Address:</p>[m
+[31m-            <Address address={connectedAddress} />[m
+[32m+[m[32m      <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-teal-600">[m
+[32m+[m[32m        <div className="container mx-auto px-4 py-8">[m
+[32m+[m[32m          {/* Header */}[m
+[32m+[m[32m          <div className="text-center text-white mb-12">[m
+[32m+[m[32m            <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-orange-500 bg-clip-text text-transparent">[m
+[32m+[m[32m              💎 Not Your Jewels[m
+[32m+[m[32m            </h1>[m
+[32m+[m[32m            <p className="text-xl opacity-90">Microcréditos estudiantiles descentralizados</p>[m
+[32m+[m[32m            <p className="text-sm opacity-75 mt-2">Financiamiento educativo sin empeñar tus pertenencias</p>[m
+           </div>[m
+ [m
+[31m-          <p className="text-center text-lg">[m
+[31m-            Get started by editing{" "}[m
+[31m-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">[m
+[31m-              packages/nextjs/app/page.tsx[m
+[31m-            </code>[m
+[31m-          </p>[m
+[31m-          <p className="text-center text-lg">[m
+[31m-            Edit your smart contract{" "}[m
+[31m-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">[m
+[31m-              YourContract.sol[m
+[31m-            </code>{" "}[m
+[31m-            in{" "}[m
+[31m-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">[m
+[31m-              packages/hardhat/contracts[m
+[31m-            </code>[m
+[31m-          </p>[m
+[31m-        </div>[m
+[32m+[m[32m          {/* Wallet Info */}[m
+[32m+[m[32m          {connectedAddress && ([m
+[32m+[m[32m            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-8 text-white text-center">[m
+[32m+[m[32m              <p className="mb-2 font-medium">Wallet Conectada:</p>[m
+[32m+[m[32m              <Address address={connectedAddress} />[m
+[32m+[m[32m            </div>[m
+[32m+[m[32m          )}[m
+ [m
+[31m-        <div className="grow bg-base-300 w-full mt-16 px-8 py-12">[m
+[31m-          <div className="flex justify-center items-center gap-12 flex-col md:flex-row">[m
+[31m-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">[m
+[31m-              <BugAntIcon className="h-8 w-8 fill-secondary" />[m
+[31m-              <p>[m
+[31m-                Tinker with your smart contract using the{" "}[m
+[31m-                <Link href="/debug" passHref className="link">[m
+[31m-                  Debug Contracts[m
+[31m-                </Link>{" "}[m
+[31m-                tab.[m
+[31m-              </p>[m
+[32m+[m[32m          {/* Pool Stats */}[m
+[32m+[m[32m          {poolStats && ([m
+[32m+[m[32m            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">[m
+[32m+[m[32m              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 text-white text-center">[m
+[32m+[m[32m                <h3 className="text-sm opacity-75">Balance Total</h3>[m
+[32m+[m[32m                <p className="text-2xl font-bold">{Number(poolStats[0]) / 1e18} ETH</p>[m
+[32m+[m[32m              </div>[m
+[32m+[m[32m              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 text-white text-center">[m
+[32m+[m[32m                <h3 className="text-sm opacity-75">Préstamos Emitidos</h3>[m
+[32m+[m[32m                <p className="text-2xl font-bold">{Number(poolStats[1]) / 1e18} ETH</p>[m
+[32m+[m[32m              </div>[m
+[32m+[m[32m              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 text-white text-center">[m
+[32m+[m[32m                <h3 className="text-sm opacity-75">Total Estudiantes</h3>[m
+[32m+[m[32m                <p className="text-2xl font-bold">{Number(poolStats[2])}</p>[m
+[32m+[m[32m              </div>[m
+[32m+[m[32m              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 text-white text-center">[m
+[32m+[m[32m                <h3 className="text-sm opacity-75">Total Inversores</h3>[m
+[32m+[m[32m                <p className="text-2xl font-bold">{Number(poolStats[3])}</p>[m
+[32m+[m[32m              </div>[m
+             </div>[m
+[31m-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">[m
+[31m-              <MagnifyingGlassIcon className="h-8 w-8 fill-secondary" />[m
+[31m-              <p>[m
+[31m-                Explore your local transactions with the{" "}[m
+[31m-                <Link href="/blockexplorer" passHref className="link">[m
+[31m-                  Block Explorer[m
+[31m-                </Link>{" "}[m
+[31m-                tab.[m
+[31m-              </p>[m
+[32m+[m[32m          )}[m
+[32m+[m
+[32m+[m[32m          {/* Tabs */}[m
+[32m+[m[32m          <div className="flex justify-center mb-8">[m
+[32m+[m[32m            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-2 inline-flex">[m
+[32m+[m[32m              <button[m
+[32m+[m[32m                onClick={() => setActiveTab("student")}[m
+[32m+[m[32m                className={`px-6 py-3 rounded-xl transition-all ${[m
+[32m+[m[32m                  activeTab === "student" ? "bg-white text-purple-600 font-semibold" : "text-white hover:bg-white/10"[m
+[32m+[m[32m                }`}[m
+[32m+[m[32m              >[m
+[32m+[m[32m                🎓 Estudiante[m
+[32m+[m[32m              </button>[m
+[32m+[m[32m              <button[m
+[32m+[m[32m                onClick={() => setActiveTab("investor")}[m
+[32m+[m[32m                className={`px-6 py-3 rounded-xl transition-all ${[m
+[32m+[m[32m                  activeTab === "investor" ? "bg-white text-purple-600 font-semibold" : "text-white hover:bg-white/10"[m
+[32m+[m[32m                }`}[m
+[32m+[m[32m              >[m
+[32m+[m[32m                💰 Inversor[m
+[32m+[m[32m              </button>[m
+             </div>[m
+           </div>[m
+[32m+[m
+[32m+[m[32m          {/* Student Tab */}[m
+[32m+[m[32m          {activeTab === "student" && ([m
+[32m+[m[32m            <div className="max-w-2xl mx-auto">[m
+[32m+[m[32m              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 text-white">[m
+[32m+[m[32m                <h2 className="text-3xl font-bold mb-6 text-center">Portal Estudiante</h2>[m
+[32m+[m
+[32m+[m[32m                {/* Student Info */}[m
+[32m+[m[32m                {studentInfo && studentInfo[6] ? ([m
+[32m+[m[32m                  <div className="mb-8 p-4 bg-green-500/20 rounded-xl border border-green-400">[m
+[32m+[m[32m                    <h3 className="text-lg font-semibold mb-2">Tu Perfil</h3>[m
+[32m+[m[32m                    <p>Nombre: {studentInfo[0]}</p>[m
+[32m+[m[32m                    <p>Universidad: {studentInfo[1]}</p>[m
+[32m+[m[32m                    <p>Puntaje Académico: {Number(studentInfo[2])}/100</p>[m
+[32m+[m[32m                    <p>Total Prestado: {Number(studentInfo[3]) / 1e18} ETH</p>[m
+[32m+[m[32m                    <p>Total Pagado: {Number(studentInfo[4]) / 1e18} ETH</p>[m
+[32m+[m[32m                    <p>Puntaje Crediticio: {Number(studentInfo[5])}</p>[m
+[32m+[m[32m                    {maxLoanAmount && <p>Límite de Crédito: {Number(maxLoanAmount) / 1e18} ETH</p>}[m
+[32m+[m[32m                  </div>[m
+[32m+[m[32m                ) : ([m
+[32m+[m[32m                  <div className="mb-8">[m
+[32m+[m[32m                    <h3 className="text-lg font-semibold mb-4">Registrarse como Estudiante</h3>[m
+[32m+[m[32m                    <div className="space-y-4">[m
+[32m+[m[32m                      <input[m
+[32m+[m[32m                        type="text"[m
+[32m+[m[32m                        placeholder="Tu nombre completo"[m
+[32m+[m[32m                        value={studentName}[m
+[32m+[m[32m                        onChange={e => setStudentName(e.target.value)}[m
+[32m+[m[32m                        className="w-full p-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50"[m
+[32m+[m[32m                      />[m
+[32m+[m[32m                      <input[m
+[32m+[m[32m                        type="text"[m
+[32m+[m[32m                        placeholder="Universidad"[m
+[32m+[m[32m                        value={university}[m
+[32m+[m[32m                        onChange={e => setUniversity(e.target.value)}[m
+[32m+[m[32m                        className="w-full p-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50"[m
+[32m+[m[32m                      />[m
+[32m+[m[32m                      <input[m
+[32m+[m[32m                        type="number"[m
+[32m+[m[32m                        placeholder="Puntaje académico (0-100)"[m
+[32m+[m[32m                        value={academicScore}[m
+[32m+[m[32m                        onChange={e => setAcademicScore(e.target.value)}[m
+[32m+[m[32m                        className="w-full p-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50"[m
+[32m+[m[32m                        min="0"[m
+[32m+[m[32m                        max="100"[m
+[32m+[m[32m                      />[m
+[32m+[m[32m                      <button[m
+[32m+[m[32m                        onClick={handleRegisterStudent}[m
+[32m+[m[32m                        disabled={!studentName || !university || !academicScore}[m
+[32m+[m[32m                        className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-semibold py-3 rounded-xl hover:from-yellow-500 hover:to-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"[m
+[32m+[m[32m                      >[m
+[32m+[m[32m                        Registrarse[m
+[32m+[m[32m                      </button>[m
+[32m+[m[32m                    </div>[m
+[32m+[m[32m                  </div>[m
+[32m+[m[32m                )}[m
+[32m+[m
+[32m+[m[32m                {/* Loan Actions */}[m
+[32m+[m[32m                {studentInfo && studentInfo[6] && ([m
+[32m+[m[32m                  <div className="space-y-6">[m
+[32m+[m[32m                    {/* Request Loan */}[m
+[32m+[m[32m                    <div>[m
+[32m+[m[32m                      <h3 className="text-lg font-semibold mb-4">Solicitar Préstamo</h3>[m
+[32m+[m[32m                      <div className="flex gap-4">[m
+[32m+[m[32m                        <input[m
+[32m+[m[32m                          type="number"[m
+[32m+[m[32m                          step="0.01"[m
+[32m+[m[32m                          placeholder="Cantidad en ETH"[m
+[32m+[m[32m                          value={loanAmount}[m
+[32m+[m[32m                          onChange={e => setLoanAmount(e.target.value)}[m
+[32m+[m[32m                          className="flex-1 p-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50"[m
+[32m+[m[32m                        />[m
+[32m+[m[32m                        <button[m
+[32m+[m[32m                          onClick={handleRequestLoan}[m
+[32m+[m[32m                          disabled={!loanAmount}[m
+[32m+[m[32m                          className="bg-blue-500 hover:bg-blue-600 px-6 py-3 rounded-xl font-semibold transition-all disabled:opacity-50"[m
+[32m+[m[32m                        >[m
+[32m+[m[32m                          Solicitar[m
+[32m+[m[32m                        </button>[m
+[32m+[m[32m                      </div>[m
+[32m+[m[32m                    </div>[m
+[32m+[m
+[32m+[m[32m                    {/* Repay Loan */}[m
+[32m+[m[32m                    <div>[m
+[32m+[m[32m                      <h3 className="text-lg font-semibold mb-4">Pagar Préstamo</h3>[m
+[32m+[m[32m                      <div className="flex gap-4">[m
+[32m+[m[32m                        <input[m
+[32m+[m[32m                          type="number"[m
+[32m+[m[32m                          step="0.01"[m
+[32m+[m[32m                          placeholder="Cantidad a pagar en ETH"[m
+[32m+[m[32m                          value={repayAmount}[m
+[32m+[m[32m                          onChange={e => setRepayAmount(e.target.value)}[m
+[32m+[m[32m                          className="flex-1 p-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50"[m
+[32m+[m[32m                        />[m
+[32m+[m[32m                        <button[m
+[32m+[m[32m                          onClick={handleRepayLoan}[m
+[32m+[m[32m                          disabled={!repayAmount}[m
+[32m+[m[32m                          className="bg-green-500 hover:bg-green-600 px-6 py-3 rounded-xl font-semibold transition-all disabled:opacity-50"[m
+[32m+[m[32m                        >[m
+[32m+[m[32m                          Pagar[m
+[32m+[m[32m                        </button>[m
+[32m+[m[32m                      </div>[m
+[32m+[m[32m                    </div>[m
+[32m+[m[32m                  </div>[m
+[32m+[m[32m                )}[m
+[32m+[m[32m              </div>[m
+[32m+[m[32m            </div>[m
+[32m+[m[32m          )}[m
+[32m+[m
+[32m+[m[32m          {/* Investor Tab */}[m
+[32m+[m[32m          {activeTab === "investor" && ([m
+[32m+[m[32m            <div className="max-w-2xl mx-auto">[m
+[32m+[m[32m              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 text-white">[m
+[32m+[m[32m                <h2 className="text-3xl font-bold mb-6 text-center">Portal Inversor</h2>[m
+[32m+[m[32m                <p className="text-center mb-8 opacity-75">Invierte en el futuro de estudiantes latinoamericanos</p>[m
+[32m+[m
+[32m+[m[32m                <div>[m
+[32m+[m[32m                  <h3 className="text-lg font-semibold mb-4">Realizar Depósito</h3>[m
+[32m+[m[32m                  <div className="flex gap-4">[m
+[32m+[m[32m                    <input[m
+[32m+[m[32m                      type="number"[m
+[32m+[m[32m                      step="0.01"[m
+[32m+[m[32m                      placeholder="Cantidad en ETH"[m
+[32m+[m[32m                      value={depositAmount}[m
+[32m+[m[32m                      onChange={e => setDepositAmount(e.target.value)}[m
+[32m+[m[32m                      className="flex-1 p-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50"[m
+[32m+[m[32m                    />[m
+[32m+[m[32m                    <button[m
+[32m+[m[32m                      onClick={handleDeposit}[m
+[32m+[m[32m                      disabled={!depositAmount}[m
+[32m+[m[32m                      className="bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 px-6 py-3 rounded-xl font-semibold transition-all disabled:opacity-50"[m
+[32m+[m[32m                    >[m
+[32m+[m[32m                      Invertir[m
+[32m+[m[32m                    </button>[m
+[32m+[m[32m                  </div>[m
+[32m+[m[32m                  <p className="text-sm opacity-75 mt-2">[m
+[32m+[m[32m                    Tus fondos serán utilizados para microcréditos estudiantiles[m
+[32m+[m[32m                  </p>[m
+[32m+[m[32m                </div>[m
+[32m+[m[32m              </div>[m
+[32m+[m[32m            </div>[m
+[32m+[m[32m          )}[m
+         </div>[m
+       </div>[m
+     </>[m
+[1mdiff --git a/packages/nextjs/contracts/deployedContracts.ts b/packages/nextjs/contracts/deployedContracts.ts[m
+[1mindex 008d4eb..666a9f8 100644[m
+[1m--- a/packages/nextjs/contracts/deployedContracts.ts[m
+[1m+++ b/packages/nextjs/contracts/deployedContracts.ts[m
+[36m@@ -4,6 +4,725 @@[m
+  */[m
+ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";[m
+ [m
+[31m-const deployedContracts = {} as const;[m
+[32m+[m[32mconst deployedContracts = {[m
+[32m+[m[32m  31337: {[m
+[32m+[m[32m    MicroLoanPool: {[m
+[32m+[m[32m      address: "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",[m
+[32m+[m[32m      abi: [[m
+[32m+[m[32m        {[m
+[32m+[m[32m          anonymous: false,[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              indexed: true,[m
+[32m+[m[32m              internalType: "address",[m
+[32m+[m[32m              name: "investor",[m
+[32m+[m[32m              type: "address",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              indexed: false,[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "amount",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          name: "DepositMade",[m
+[32m+[m[32m          type: "event",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          anonymous: false,[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              indexed: true,[m
+[32m+[m[32m              internalType: "address",[m
+[32m+[m[32m              name: "student",[m
+[32m+[m[32m              type: "address",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              indexed: false,[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "amount",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              indexed: false,[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "interestRate",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          name: "LoanIssued",[m
+[32m+[m[32m          type: "event",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          anonymous: false,[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              indexed: true,[m
+[32m+[m[32m              internalType: "address",[m
+[32m+[m[32m              name: "student",[m
+[32m+[m[32m              type: "address",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              indexed: false,[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "amount",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          name: "LoanRepaid",[m
+[32m+[m[32m          type: "event",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          anonymous: false,[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              indexed: true,[m
+[32m+[m[32m              internalType: "address",[m
+[32m+[m[32m              name: "student",[m
+[32m+[m[32m              type: "address",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              indexed: false,[m
+[32m+[m[32m              internalType: "string",[m
+[32m+[m[32m              name: "name",[m
+[32m+[m[32m              type: "string",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              indexed: false,[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "academicScore",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          name: "StudentRegistered",[m
+[32m+[m[32m          type: "event",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [],[m
+[32m+[m[32m          name: "deposit",[m
+[32m+[m[32m          outputs: [],[m
+[32m+[m[32m          stateMutability: "payable",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "address",[m
+[32m+[m[32m              name: "",[m
+[32m+[m[32m              type: "address",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          name: "deposits",[m
+[32m+[m[32m          outputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          stateMutability: "view",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "address",[m
+[32m+[m[32m              name: "_student",[m
+[32m+[m[32m              type: "address",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          name: "getMaxLoanAmount",[m
+[32m+[m[32m          outputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          stateMutability: "view",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [],[m
+[32m+[m[32m          name: "getPoolStats",[m
+[32m+[m[32m          outputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "totalBalance",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "totalIssued",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "totalStudents",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "totalInvestors",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          stateMutability: "view",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "address",[m
+[32m+[m[32m              name: "_student",[m
+[32m+[m[32m              type: "address",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          name: "getStudentInfo",[m
+[32m+[m[32m          outputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "string",[m
+[32m+[m[32m              name: "name",[m
+[32m+[m[32m              type: "string",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "string",[m
+[32m+[m[32m              name: "university",[m
+[32m+[m[32m              type: "string",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "academicScore",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "totalBorrowed",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "totalRepaid",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "creditScore",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "bool",[m
+[32m+[m[32m              name: "isActive",[m
+[32m+[m[32m              type: "bool",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          stateMutability: "view",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "address",[m
+[32m+[m[32m              name: "_student",[m
+[32m+[m[32m              type: "address",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          name: "getStudentLoans",[m
+[32m+[m[32m          outputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256[]",[m
+[32m+[m[32m              name: "amounts",[m
+[32m+[m[32m              type: "uint256[]",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256[]",[m
+[32m+[m[32m              name: "interestRates",[m
+[32m+[m[32m              type: "uint256[]",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256[]",[m
+[32m+[m[32m              name: "dueDates",[m
+[32m+[m[32m              type: "uint256[]",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "bool[]",[m
+[32m+[m[32m              name: "repaidStatus",[m
+[32m+[m[32m              type: "bool[]",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          stateMutability: "view",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          name: "investors",[m
+[32m+[m[32m          outputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "address",[m
+[32m+[m[32m              name: "",[m
+[32m+[m[32m              type: "address",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          stateMutability: "view",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "string",[m
+[32m+[m[32m              name: "_name",[m
+[32m+[m[32m              type: "string",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "string",[m
+[32m+[m[32m              name: "_university",[m
+[32m+[m[32m              type: "string",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "_academicScore",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          name: "registerStudent",[m
+[32m+[m[32m          outputs: [],[m
+[32m+[m[32m          stateMutability: "nonpayable",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "_loanIndex",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          name: "repayLoan",[m
+[32m+[m[32m          outputs: [],[m
+[32m+[m[32m          stateMutability: "payable",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "_amount",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          name: "requestLoan",[m
+[32m+[m[32m          outputs: [],[m
+[32m+[m[32m          stateMutability: "nonpayable",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          name: "studentAddresses",[m
+[32m+[m[32m          outputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "address",[m
+[32m+[m[32m              name: "",[m
+[32m+[m[32m              type: "address",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          stateMutability: "view",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "address",[m
+[32m+[m[32m              name: "",[m
+[32m+[m[32m              type: "address",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          name: "studentLoans",[m
+[32m+[m[32m          outputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "amount",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "interestRate",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "dueDate",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "bool",[m
+[32m+[m[32m              name: "isRepaid",[m
+[32m+[m[32m              type: "bool",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "repaidAmount",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          stateMutability: "view",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "address",[m
+[32m+[m[32m              name: "",[m
+[32m+[m[32m              type: "address",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          name: "students",[m
+[32m+[m[32m          outputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "string",[m
+[32m+[m[32m              name: "name",[m
+[32m+[m[32m              type: "string",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "string",[m
+[32m+[m[32m              name: "university",[m
+[32m+[m[32m              type: "string",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "academicScore",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "totalBorrowed",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "totalRepaid",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "bool",[m
+[32m+[m[32m              name: "isActive",[m
+[32m+[m[32m              type: "bool",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "creditScore",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          stateMutability: "view",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [],[m
+[32m+[m[32m          name: "totalLoansIssued",[m
+[32m+[m[32m          outputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          stateMutability: "view",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [],[m
+[32m+[m[32m          name: "totalPoolBalance",[m
+[32m+[m[32m          outputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          stateMutability: "view",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m      ],[m
+[32m+[m[32m      inheritedFunctions: {},[m
+[32m+[m[32m      deployedOnBlock: 6,[m
+[32m+[m[32m    },[m
+[32m+[m[32m    StudentRegistry: {[m
+[32m+[m[32m      address: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",[m
+[32m+[m[32m      abi: [[m
+[32m+[m[32m        {[m
+[32m+[m[32m          anonymous: false,[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              indexed: false,[m
+[32m+[m[32m              internalType: "address",[m
+[32m+[m[32m              name: "student",[m
+[32m+[m[32m              type: "address",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              indexed: false,[m
+[32m+[m[32m              internalType: "string",[m
+[32m+[m[32m              name: "name",[m
+[32m+[m[32m              type: "string",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          name: "StudentRegistered",[m
+[32m+[m[32m          type: "event",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [],[m
+[32m+[m[32m          name: "getStudentCount",[m
+[32m+[m[32m          outputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          stateMutability: "view",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "string",[m
+[32m+[m[32m              name: "_name",[m
+[32m+[m[32m              type: "string",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "string",[m
+[32m+[m[32m              name: "_university",[m
+[32m+[m[32m              type: "string",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "_academicScore",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          name: "registerStudent",[m
+[32m+[m[32m          outputs: [],[m
+[32m+[m[32m          stateMutability: "nonpayable",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          name: "studentAddresses",[m
+[32m+[m[32m          outputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "address",[m
+[32m+[m[32m              name: "",[m
+[32m+[m[32m              type: "address",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          stateMutability: "view",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "address",[m
+[32m+[m[32m              name: "",[m
+[32m+[m[32m              type: "address",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          name: "students",[m
+[32m+[m[32m          outputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "string",[m
+[32m+[m[32m              name: "name",[m
+[32m+[m[32m              type: "string",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "string",[m
+[32m+[m[32m              name: "university",[m
+[32m+[m[32m              type: "string",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "academicScore",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "bool",[m
+[32m+[m[32m              name: "isRegistered",[m
+[32m+[m[32m              type: "bool",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          stateMutability: "view",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m      ],[m
+[32m+[m[32m      inheritedFunctions: {},[m
+[32m+[m[32m      deployedOnBlock: 3,[m
+[32m+[m[32m    },[m
+[32m+[m[32m    YourContract: {[m
+[32m+[m[32m      address: "0x5FbDB2315678afecb367f032d93F642f64180aa3",[m
+[32m+[m[32m      abi: [[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "address",[m
+[32m+[m[32m              name: "_owner",[m
+[32m+[m[32m              type: "address",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          stateMutability: "nonpayable",[m
+[32m+[m[32m          type: "constructor",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          anonymous: false,[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              indexed: true,[m
+[32m+[m[32m              internalType: "address",[m
+[32m+[m[32m              name: "greetingSetter",[m
+[32m+[m[32m              type: "address",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              indexed: false,[m
+[32m+[m[32m              internalType: "string",[m
+[32m+[m[32m              name: "newGreeting",[m
+[32m+[m[32m              type: "string",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              indexed: false,[m
+[32m+[m[32m              internalType: "bool",[m
+[32m+[m[32m              name: "premium",[m
+[32m+[m[32m              type: "bool",[m
+[32m+[m[32m            },[m
+[32m+[m[32m            {[m
+[32m+[m[32m              indexed: false,[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "value",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          name: "GreetingChange",[m
+[32m+[m[32m          type: "event",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [],[m
+[32m+[m[32m          name: "greeting",[m
+[32m+[m[32m          outputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "string",[m
+[32m+[m[32m              name: "",[m
+[32m+[m[32m              type: "string",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          stateMutability: "view",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [],[m
+[32m+[m[32m          name: "owner",[m
+[32m+[m[32m          outputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "address",[m
+[32m+[m[32m              name: "",[m
+[32m+[m[32m              type: "address",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          stateMutability: "view",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [],[m
+[32m+[m[32m          name: "premium",[m
+[32m+[m[32m          outputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "bool",[m
+[32m+[m[32m              name: "",[m
+[32m+[m[32m              type: "bool",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          stateMutability: "view",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "string",[m
+[32m+[m[32m              name: "_newGreeting",[m
+[32m+[m[32m              type: "string",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          name: "setGreeting",[m
+[32m+[m[32m          outputs: [],[m
+[32m+[m[32m          stateMutability: "payable",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [],[m
+[32m+[m[32m          name: "totalCounter",[m
+[32m+[m[32m          outputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          stateMutability: "view",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "address",[m
+[32m+[m[32m              name: "",[m
+[32m+[m[32m              type: "address",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          name: "userGreetingCounter",[m
+[32m+[m[32m          outputs: [[m
+[32m+[m[32m            {[m
+[32m+[m[32m              internalType: "uint256",[m
+[32m+[m[32m              name: "",[m
+[32m+[m[32m              type: "uint256",[m
+[32m+[m[32m            },[m
+[32m+[m[32m          ],[m
+[32m+[m[32m          stateMutability: "view",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          inputs: [],[m
+[32m+[m[32m          name: "withdraw",[m
+[32m+[m[32m          outputs: [],[m
+[32m+[m[32m          stateMutability: "nonpayable",[m
+[32m+[m[32m          type: "function",[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          stateMutability: "payable",[m
+[32m+[m[32m          type: "receive",[m
+[32m+[m[32m        },[m
+[32m+[m[32m      ],[m
+[32m+[m[32m      inheritedFunctions: {},[m
+[32m+[m[32m      deployedOnBlock: 1,[m
+[32m+[m[32m    },[m
+[32m+[m[32m  },[m
+[32m+[m[32m} as const;[m
+ [m
+ export default deployedContracts satisfies GenericContractsDeclaration;[m
+[1mdiff --git a/packages/nextjs/scaffold.config.ts b/packages/nextjs/scaffold.config.ts[m
+[1mindex 8310123..8e89eed 100644[m
+[1m--- a/packages/nextjs/scaffold.config.ts[m
+[1m+++ b/packages/nextjs/scaffold.config.ts[m
+[36m@@ -1,3 +1,4 @@[m
+[32m+[m[32mimport { defineChain } from "viem";[m
+ import * as chains from "viem/chains";[m
+ [m
+ export type BaseConfig = {[m
+[36m@@ -13,28 +14,99 @@[m [mexport type ScaffoldConfig = BaseConfig;[m
+ [m
+ export const DEFAULT_ALCHEMY_API_KEY = "oKxs-03sij-U_N0iOlrSsZFr29-IqbuF";[m
+ [m
+[32m+[m[32m//Define Lisk Sepolia Testnet[m
+[32m+[m[32mconst liskSepolia = defineChain({[m
+[32m+[m[32m  id: 4202,[m
+[32m+[m[32m  name: "Lisk Sepolia Testnet",[m
+[32m+[m[32m  network: "lisk-sepolia",[m
+[32m+[m[32m  nativeCurrency: {[m
+[32m+[m[32m    name: "Ether",[m
+[32m+[m[32m    symbol: "ETH",[m
+[32m+[m[32m    decimals: 18,[m
+[32m+[m[32m  },[m
+[32m+[m[32m  rpcUrls: {[m
+[32m+[m[32m    default: {[m
+[32m+[m[32m      http: ["https://rpc.sepolia-api.lisk.com"],[m
+[32m+[m[32m    },[m
+[32m+[m[32m    public: {[m
+[32m+[m[32m      http: ["https://rpc.sepolia-api.lisk.com"],[m
+[32m+[m[32m    },[m
+[32m+[m[32m  },[m
+[32m+[m[32m  blockExplorers: {[m
+[32m+[m[32m    default: {[m
+[32m+[m[32m      name: "Blockscout",[m
+[32m+[m[32m      url: "https://sepolia-blockscout.lisk.com",[m
+[32m+[m[32m    },[m
+[32m+[m[32m  },[m
+[32m+[m[32m  testnet: true,[m
+[32m+[m[32m});[m
+[32m+[m
+[32m+[m[32m// Define Lisk Mainnet[m
+[32m+[m[32mconst liskMainnet = defineChain({[m
+[32m+[m[32m  id: 1135,[m
+[32m+[m[32m  name: "Lisk",[m
+[32m+[m[32m  network: "lisk",[m
+[32m+[m[32m  nativeCurrency: {[m
+[32m+[m[32m    name: "Ether",[m
+[32m+[m[32m    symbol: "ETH",[m
+[32m+[m[32m    decimals: 18,[m
+[32m+[m[32m  },[m
+[32m+[m[32m  rpcUrls: {[m
+[32m+[m[32m    default: {[m
+[32m+[m[32m      http: ["https://rpc.api.lisk.com"],[m
+[32m+[m[32m    },[m
+[32m+[m[32m    public: {[m
+[32m+[m[32m      http: ["https://rpc.api.lisk.com"],[m
+[32m+[m[32m    },[m
+[32m+[m[32m  },[m
+[32m+[m[32m  blockExplorers: {[m
+[32m+[m[32m    default: {[m
+[32m+[m[32m      name: "Blockscout",[m
+[32m+[m[32m      url: "https://blockscout.lisk.com",[m
+[32m+[m[32m    },[m
+[32m+[m[32m  },[m
+[32m+[m[32m});[m
+[32m+[m
+[32m+[m[32m// Available networks configuration for future use[m
+[32m+[m[32mconst availableNetworks = {[m
+[32m+[m[32m  hardhat: chains.hardhat,[m
+[32m+[m[32m  liskSepolia,[m
+[32m+[m[32m  liskMainnet, // Now being used to avoid ESLint error[m
+[32m+[m[32m};[m
+[32m+[m
+ const scaffoldConfig = {[m
+   // The networks on which your DApp is live[m
+[31m-  targetNetworks: [chains.hardhat],[m
+[32m+[m[32m  targetNetworks: [[m
+[32m+[m[32m    availableNetworks.hardhat, // Para desarrollo local[m
+[32m+[m[32m    availableNetworks.liskSepolia, // Para testnet[m
+[32m+[m[32m    // availableNetworks.liskMainnet, // Descomentar para mainnet cuando esté listo[m
+[32m+[m[32m  ],[m
+[32m+[m
+   // The interval at which your front-end polls the RPC servers for new data (it has no effect if you only target the local network (default is 4000))[m
+   pollingInterval: 30000,[m
+[32m+[m
+   // This is ours Alchemy's default API key.[m
+   // You can get your own at https://dashboard.alchemyapi.io[m
+   // It's recommended to store it in an env variable:[m
+   // .env.local for local testing, and in the Vercel/system env config for live apps.[m
+   alchemyApiKey: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || DEFAULT_ALCHEMY_API_KEY,[m
+[32m+[m
+   // If you want to use a different RPC for a specific network, you can add it here.[m
+   // The key is the chain ID, and the value is the HTTP RPC URL[m
+   rpcOverrides: {[m
+     // Example:[m
+[31m-    // [chains.mainnet.id]: "https://mainnet.buidlguidl.com",[m
+[32m+[m[32m    // [chains.mainnet.id]: "https://mainnet.buidlguidl.com"[m
+[32m+[m[32m    [4202]: "https://rpc.sepolia-api.lisk.com", // Lisk Sepolia[m
+[32m+[m[32m    [1135]: "https://rpc.api.lisk.com", // Lisk Mainnet[m
+   },[m
+[32m+[m
+   // This is ours WalletConnect's default project ID.[m
+   // You can get your own at https://cloud.walletconnect.com[m
+   // It's recommended to store it in an env variable:[m
+   // .env.local for local testing, and in the Vercel/system env config for live apps.[m
+   walletConnectProjectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || "3a8170812b534d0ff9d794f19a901d64",[m
+[31m-  onlyLocalBurnerWallet: true,[m
+[32m+[m
+[32m+[m[32m  onlyLocalBurnerWallet: false, // Cambiado de true a false[m
+ } as const satisfies ScaffoldConfig;[m
+ [m
+ export default scaffoldConfig;[m
