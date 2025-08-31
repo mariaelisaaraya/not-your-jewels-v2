@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { Quote, Star } from "lucide-react";
 
@@ -33,7 +34,10 @@ const TestimonialsSection = () => {
   ];
 
   return (
-    <section id="testimonios" className="py-20 bg-gradient-to-br from-white to-gray-50 text-gray-900">
+    <section
+      id="testimonios"
+      className="py-20 bg-gradient-to-br from-white to-gray-50 text-gray-900"
+    >
       <div className="max-w-6xl mx-auto px-4">
         <motion.div
           className="text-center mb-16"
@@ -44,7 +48,9 @@ const TestimonialsSection = () => {
         >
           <h2 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
             Historias de{" "}
-            <span className="bg-gradient-to-r from-[#FF8FB1] to-[#00AEEF] bg-clip-text text-transparent">éxito</span>
+            <span className="bg-gradient-to-r from-[#FF8FB1] to-[#00AEEF] bg-clip-text text-transparent">
+              éxito
+            </span>
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
             Estudiantes reales que cambiaron su futuro sin perder sus tesoros familiares
@@ -83,11 +89,19 @@ const TestimonialsSection = () => {
               </div>
 
               {/* Testimonial Text */}
-              <p className="text-gray-700 leading-relaxed mb-6 italic">{'"' + testimonial.text + '"'}</p>
+              <p className="text-gray-700 leading-relaxed mb-6 italic">
+                {'"' + testimonial.text + '"'}
+              </p>
 
               {/* Author */}
               <div className="flex items-center space-x-4">
-                <img src={testimonial.image} alt={testimonial.name} className="w-12 h-12 rounded-full object-cover" />
+                <Image
+                  src={testimonial.image}
+                  alt={testimonial.name}
+                  width={48}
+                  height={48}
+                  className="w-12 h-12 rounded-full object-cover"
+                />
                 <div>
                   <h4 className="font-semibold text-gray-900">{testimonial.name}</h4>
                   <p className="text-sm text-gray-600">{testimonial.role}</p>

@@ -16,11 +16,10 @@ export default defineConfig([
       prettier: prettierPlugin,
     },
     extends: compat.extends("next/core-web-vitals", "next/typescript", "prettier"),
-
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/ban-ts-comment": "off",
-
+      "@next/next/no-img-element": "off", // Añadida esta regla
       "prettier/prettier": [
         "warn",
         {
